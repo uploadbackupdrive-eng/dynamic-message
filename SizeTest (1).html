@@ -175,5 +175,51 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
 });
 </script>
 
+<script>
+// ✅ رابط النسخة الأصلية على GitHub (عدل الرابط على حسب مستودعك)
+const GITHUB_URL = "https://raw.githubusercontent.com/uploadbackupdrive-eng/dynamic-message/main/SizeTest%20(1).html";
+
+// ✅ تحميل صفحة GitHub وتحديث النسخة إذا لزم
+async function checkForUpdates() {
+    if (!navigator.onLine) return;  // بدون نت → ما يحدث شيء
+
+    try {
+        const response = await fetch(GITHUB_URL + "?v=" + Date.now());
+        const newCode = await response.text();
+
+        const savedCode = localStorage.getItem("latest_version_code");
+
+        if (!savedCode) {
+            // أول تشغيل → نحفظ نسخة GitHub
+            localStorage.setItem("latest_version_code", newCode);
+            return;
+        }
+
+        // ✅ مقارنة النسختين
+        if (savedCode.trim() !== newCode.trim()) {
+            console.log("✅ تحديث جديد متاح! يتم التحديث...");
+
+            // حفظ النسخة الجديدة
+            localStorage.setItem("latest_version_code", newCode);
+
+            // استبدال الصفحة فوراً
+            document.open();
+            document.write(newCode);
+            document.close();
+        }
+
+    } catch (e) {
+        console.log("⚠️ فشل فحص التحديث:", e);
+    }
+}
+
+// ✅ نفذ الفحص عند فتح الصفحة
+checkForUpdates();
+
+// ✅ وأيضاً كل 60 ثانية إذا فتح الصفحة فترة طويلة
+setInterval(checkForUpdates, 60000);
+</script>
+
+
 
 </body></html>
