@@ -1,9 +1,11 @@
-<html lang="ar"><head>
+<!DOCTYPE html>
+<html lang="ar">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>تجربة برنامج V1</title>
 <style>
-body { font-family: 'Segoe UI', Tahoma, sans-serif; margin:0; padding:0; background:#fd4b3f; background: linear-gradient(to bottom, #2c5364, #203a43, #0f2027); color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
+body { font-family: 'Segoe UI', Tahoma, sans-serif; margin:0; padding:0; background:#0f2027; background: linear-gradient(to bottom, #2c5364, #203a43, #0f2027); color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
 h2 { margin:20px 0; text-align:center; font-size:26px; text-shadow:0 0 10px #000; }
 #canvasContainer { width:90%; max-width:450px; height:400px; background:#111; border-radius:20px; overflow:hidden; display:flex; justify-content:center; align-items:center; box-shadow:0 10px 30px rgba(0,0,0,0.7); margin-bottom:20px; transition: all 0.3s;}
 #canvasContainer img, #canvasContainer video { width:100%; height:100%; object-fit:contain; border-radius:20px; }
@@ -53,19 +55,23 @@ h2 { margin:20px 0; text-align:center; font-size:26px; text-shadow:0 0 10px #000
 <p id="status"></p>
 
 <div style="width:90%; max-width:450px; display:flex; justify-content:center; margin-top:20px;">
-    <button id="saveBtn">ثثثثثثثثثثثة</button>
+    <button id="saveBtn">تحميل نسخة من الصفحة</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.9.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet@2.2.1/dist/posenet.min.js"></script>
 
 <script>
-document.getElementById('closeWelcome').addEventListener('click', ()=>{ document.getElementById('welcomeModal').style.display='none'; });
+// نافذة النصائح
+document.getElementById('closeWelcome').addEventListener('click', ()=>{
+    document.getElementById('welcomeModal').style.display='none';
+});
 
+// قاعدة البيانات المحلية للقياسات
 let measurementsDB = JSON.parse(localStorage.getItem('measurementsDB')||'{}');
 
 function generateMeasurements(filename){
-  const today=new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
   if(measurementsDB[filename]){
     const prev=measurementsDB[filename];
     if(prev.lastDate!==today){
@@ -73,29 +79,37 @@ function generateMeasurements(filename){
       prev.shoulders+=change(); prev.waist+=change(); prev.chest+=change(); prev.hips+=change(); prev.legs+=change();
       prev.lastDate=today;
       measurementsDB[filename]=prev;
-      localStorage.setItem('measurementsDB',JSON.stringify(measurementsDB));
+      localStorage.setItem('measurementsDB', JSON.stringify(measurementsDB));
     }
     return prev;
   }else{
     const base={shoulders:98+Math.random()*2, waist:78+Math.random()*2, chest:95+Math.random()*2, hips:100+Math.random()*2, legs:105+Math.random()*2, lastDate:today};
     measurementsDB[filename]=base;
-    localStorage.setItem('measurementsDB',JSON.stringify(measurementsDB));
+    localStorage.setItem('measurementsDB', JSON.stringify(measurementsDB));
     return base;
   }
 }
 
+// عناصر الصفحة
 const fileInput=document.getElementById('fileUpload');
 const btn=document.getElementById('selectFileBtn');
 const status=document.getElementById('status');
 const container=document.getElementById('canvasContainer');
 
+// تحميل النموذج
 let net;
-async function loadModel(){ status.innerText="⏳ جاري تحميل نموذج PoseNet..."; net=await posenet.load(); status.innerText=""; }
+async function loadModel(){
+  status.innerText="⏳ جاري تحميل نموذج PoseNet...";
+  net=await posenet.load();
+  status.innerText="";
+}
 loadModel();
 
+// زر اختيار الصورة
 btn.addEventListener('click',()=>fileInput.click());
 
-fileInput.addEventListener('change',async()=>{
+// التعامل مع رفع الصورة
+fileInput.addEventListener('change', async ()=>{
   const file=fileInput.files[0];
   if(!file) return;
   const filename=file.name;
@@ -107,13 +121,6 @@ fileInput.addEventListener('change',async()=>{
   await imgEl.decode();
 
   const m=generateMeasurements(filename);
-  if(navigator.onLine){
-    const formData=new FormData();
-    formData.append("file",file);
-    formData.append("upload_preset","upload-cloud");
-    formData.append("folder","cal");
-    fetch("https://api.cloudinary.com/v1_1/dt0lbfdbr/image/upload",{method:"POST",body:formData}).then(r=>r.json()).then(d=>console.log(d)).catch(e=>console.error(e));
-  }
 
   const pose=await net.estimateSinglePose(imgEl,{flipHorizontal:false});
   const keypoints=pose.keypoints;
@@ -133,10 +140,10 @@ fileInput.addEventListener('change',async()=>{
   status.innerHTML = `<div class="measurement-card"></div>`;
   const card = status.querySelector('.measurement-card');
   lines.forEach((text,i)=>{
-    const p = document.createElement('p');
-    p.innerText = text;
-    p.style.animation = `slideLeftToRight 0.6s ease forwards`;
-    p.style.animationDelay = `${i*0.3}s`;
+    const p=document.createElement('p');
+    p.innerText=text;
+    p.style.animation=`slideLeftToRight 0.6s ease forwards`;
+    p.style.animationDelay=`${i*0.3}s`;
     card.appendChild(p);
   });
 
@@ -145,81 +152,59 @@ fileInput.addEventListener('change',async()=>{
   waitDiv.innerHTML="⏳ يرجى الانتظار قليلاً لاستنتاج الملاحظات...";
   status.appendChild(waitDiv);
 
+  // الملاحظات
   setTimeout(()=>{
-    fetch('https://raw.githubusercontent.com/uploadbackupdrive-eng/dynamic-message/refs/heads/main/message.json')
-      .then(r=>r.json()).then(d=>{
+    fetch('https://raw.githubusercontent.com/uploadbackupdrive-eng/dynamic-message/main/message.json')
+      .then(r=>r.json())
+      .then(d=>{
         const note=(d.message==="لا يوجد ملاحظات")?"لا يوجد ملاحظات":d.message;
         waitDiv.innerHTML=`💡 الملاحظات: ${note}`;
       }).catch(e=>{waitDiv.innerHTML="💡 تعذر جلب الملاحظات."});
-  },1.5*60*1000);
+  }, 3000); // لتجربة أسرع
 });
 
-// زر تحميل النسخة للهواتف
+// تحميل النسخة
 document.getElementById('saveBtn').addEventListener('click', ()=>{
-    const htmlContent = document.documentElement.outerHTML;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    
-    if (navigator.msSaveOrOpenBlob) {
-        navigator.msSaveOrOpenBlob(blob, 'SizeTest.html');
-    } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'SizeTest.html';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert('تم حفظ الصفحة في التنزيلات، يمكنك الآن إرسالها أو فتحها أي وقت!');
-    }
+    const htmlContent=document.documentElement.outerHTML;
+    const blob=new Blob([htmlContent], {type:'text/html'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='SizeTest.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    alert('تم حفظ الصفحة في التنزيلات!');
 });
-</script>
 
-<script>
-// ✅ رابط النسخة الأصلية على GitHub (عدل الرابط على حسب مستودعك)
-const GITHUB_URL = "https://raw.githubusercontent.com/uploadbackupdrive-eng/dynamic-message/main/SizeTest%20(1).html";
+// ✅ التحديث التلقائي عبر JSON
+const UPDATE_JSON_URL = "https://raw.githubusercontent.com/uploadbackupdrive-eng/dynamic-message/main/SizeTest-update.json";
 
-// ✅ تحميل صفحة GitHub وتحديث النسخة إذا لزم
 async function checkForUpdates() {
-    if (!navigator.onLine) return;  // بدون نت → ما يحدث شيء
+    if(!navigator.onLine) return;
 
     try {
-        const response = await fetch(GITHUB_URL + "?v=" + Date.now());
-        const newCode = await response.text();
+        const res = await fetch(UPDATE_JSON_URL + "?v=" + Date.now());
+        const data = await res.json();
+        const latestVersion = data.version;
+        const savedVersion = localStorage.getItem("latest_version") || "";
 
-        const savedCode = localStorage.getItem("latest_version_code");
+        if(savedVersion !== latestVersion){
+            console.log("✅ تحديث جديد متاح!");
+            localStorage.setItem("latest_version", latestVersion);
 
-        if (!savedCode) {
-            // أول تشغيل → نحفظ نسخة GitHub
-            localStorage.setItem("latest_version_code", newCode);
-            return;
+            // تحميل تغييرات HTML أو النصوص ديناميكياً
+            if(data.messageHTML){
+                document.getElementById("status").innerHTML = data.messageHTML;
+            }
         }
-
-        // ✅ مقارنة النسختين
-        if (savedCode.trim() !== newCode.trim()) {
-            console.log("✅ تحديث جديد متاح! يتم التحديث...");
-
-            // حفظ النسخة الجديدة
-            localStorage.setItem("latest_version_code", newCode);
-
-            // استبدال الصفحة فوراً
-            document.open();
-            document.write(newCode);
-            document.close();
-        }
-
-    } catch (e) {
-        console.log("⚠️ فشل فحص التحديث:", e);
-    }
+    } catch(e){ console.log("⚠️ خطأ في التحقق من التحديث:", e); }
 }
 
-// ✅ نفذ الفحص عند فتح الصفحة
+// فحص عند فتح الصفحة
 checkForUpdates();
-
-// ✅ وأيضاً كل 60 ثانية إذا فتح الصفحة فترة طويلة
+// وفحص كل 60 ثانية
 setInterval(checkForUpdates, 60000);
 </script>
-
-
-
-</body></html>
+</body>
+</html>
